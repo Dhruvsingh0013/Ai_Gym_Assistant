@@ -2,10 +2,19 @@ import streamlit as st
 import cv2
 import cv2.data
 import requests
+import sys
+import subprocess
 from exercise import start_exercise_detection
 from face_recognition import train_model
 from attendance import mark_attendance
 from gym_buddy import get_response, speak
+
+
+def launch_jarvis():
+    try:
+        subprocess.Popen([sys.executable, "jarvis.py"])
+    except Exception as e:
+        print("Jarvis error:", e)
 
 # -------------------------------
 # CONFIG
@@ -230,36 +239,62 @@ elif mode == "Face Recognition":
 # 🤖 JARVIS GYM BUDDY
 # -------------------------------
 
-col1, col2, col3 = st.columns([9,1,1])
-with col3:
-    if st.button("🤖"):
+# -------------------------------
+# 🤖 GYM BUDDY (CLEAN UI)
+# -------------------------------
+
+col1, col2 = st.columns([6,1])
+
+with col2:
+    if st.button("🤖", help="Open Gym Buddy"):
         st.session_state.buddy_open = not st.session_state.buddy_open
+        launch_jarvis()
 
+# Show Jarvis animation (WEB)
 if st.session_state.buddy_open:
+    st.markdown("""
+    <div style="
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        width: 200px;
+        height: 200px;
+        border-radius: 50%;
+        background: radial-gradient(circle, #22c55e, #0e1117);
+        box-shadow: 0 0 40px #22c55e;
+        animation: pulse 1.5s infinite;
+        z-index:9999;
+    "></div>
 
-    st.markdown("<div class='buddy-box'>", unsafe_allow_html=True)
+    <style>
+    @keyframes pulse {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.1); }
+        100% { transform: scale(1); }
+    }
+    </style>
+    """, unsafe_allow_html=True)
 
     st.markdown("### 🤖 Gym Buddy")
 
     if len(st.session_state.buddy_chat) == 0:
-        st.session_state.buddy_chat.append(("bot","Hey champ 💪 Ready to train?"))
+        st.session_state.buddy_chat.append(("bot", "Hey champ 💪 Ready to train?"))
 
-    for role,msg in st.session_state.buddy_chat:
-        cls = "user" if role=="user" else "bot"
-        st.markdown(f"<div class='{cls}'>{msg}</div>", unsafe_allow_html=True)
+    for role, msg in st.session_state.buddy_chat:
+        if role == "user":
+            st.markdown(f"<div class='user'>{msg}</div>", unsafe_allow_html=True)
+        else:
+            st.markdown(f"<div class='bot'>{msg}</div>", unsafe_allow_html=True)
 
     with st.form("buddy_form", clear_on_submit=True):
-        user_msg = st.text_input("Type...", label_visibility="collapsed")
+        msg = st.text_input("Type...", label_visibility="collapsed")
         send = st.form_submit_button("Send")
 
-    if send and user_msg:
-        with st.spinner("🤖 Thinking..."):
-            reply = get_response(user_msg)
+    if send and msg:
+        reply = get_response(msg)
 
-        st.session_state.buddy_chat.append(("user", user_msg))
+        st.session_state.buddy_chat.append(("user", msg))
         st.session_state.buddy_chat.append(("bot", reply))
 
         speak(reply)
         st.rerun()
-
-    st.markdown("</div>", unsafe_allow_html=True)
